@@ -58,7 +58,7 @@ let rec tokenize (stream:char seq) =
     let rec parseIdent stream i = 
         let rec helper acc = function
             | Ident(i) :: t -> helper (i :: acc) t
-            | left -> (AST.Id(new string(List.toArray acc)), left)
+            | left -> (AST.Id(new string(acc |> List.rev |> List.toArray)), left)
         helper [i] stream
     let rec parseWs = function
         | WhiteSpace(_) :: t -> parseWs t

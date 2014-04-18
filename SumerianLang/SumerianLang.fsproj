@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="AST.fs" />
     <Compile Include="Token.fs" />
+    <Compile Include="Interpret.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>
