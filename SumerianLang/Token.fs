@@ -3,7 +3,6 @@
 type Token =
     {
         node : AST.Node;
-        line : int;
         index : int;
     }
 
