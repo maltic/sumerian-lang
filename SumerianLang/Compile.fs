@@ -24,7 +24,15 @@ let liftDefinitions =
 
 
 let rec toOpCode path defs = function
-    | Parse.Id(id) -> VM.Call(Map.find (id::path) defs)
+    | Parse.Id(id) when VM.Keywords.keywords.ContainsKey id -> 
+        VM.Keyword(VM.Keywords.keywords.Item id)
+    | Parse.Id(id) -> 
+        if Map.containsKey (id::path) defs then
+            VM.Call(Map.find (id::path) defs)
+        elif Map.containsKey (id::(List.tail path)) defs then
+            VM.Call(Map.find (id::(List.tail path)) defs) // recursion
+        else
+            failwith (sprintf "Variable '%A' undefined" id)
     | Parse.Bool(b) -> VM.Bool(b)
     | Parse.Int(i) -> VM.Int(i)
     | Parse.Float(f) -> VM.Float(f)
@@ -39,6 +47,5 @@ let compile stream =
         Seq.zip (seq { for k, _ in Map.toSeq defs -> k }) (Seq.initInfinite id)
         |> Map.ofSeq
     let codeToValue = 
-        Seq.zip (Seq.initInfinite id) (seq { for k, v in Map.toSeq defs -> compileLayer k pathToCode v })
-        |> Map.ofSeq
+        [| for k, v in Map.toSeq defs -> compileLayer k pathToCode v |]
     compileLayer [] pathToCode rem, codeToValue
