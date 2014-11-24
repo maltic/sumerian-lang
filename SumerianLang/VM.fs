@@ -85,13 +85,33 @@ module Keywords =
         | Float(_) :: _ as stack -> Int(1) :: stack
         | Bool(_) :: _ as stack -> Int(2) :: stack
         | _ -> failwith "Invalid arguments for function 'type of'"
-
     let dup = function
         | v :: t -> v :: v :: t
         | _ -> failwith "Invalid arguments for function 'dup'"
     let swap = function
         | a :: b :: t -> b :: a :: t
         | _ -> failwith "Invalid arguments for function 'swap'"
+
+    let explode = function
+        | Block(b) :: t -> (List.rev b) @ t
+        | _ -> failwith "Invalid arguments for function 'explode'"
+
+    let dip = function
+         | Block(b) :: c :: t -> [c] @ (List.rev b) @ t
+         | _ -> failwith "Invalid arguments for function 'dip'"
+
+    let branch = function
+        | Block(thenb) :: Block(elseb) :: Bool(cond) :: t ->
+            List.rev (if cond then thenb else elseb) @ t
+        | _ -> failwith "Invalid arguments for function 'if'"
+
+    let pop = function
+         | _ :: t -> t
+         | _ -> failwith "Invalid arguments for function 'pop'"
+
+    let print = function
+        | h :: t -> printfn "%A" h; t
+        | _ -> failwith "Invalid arguments for function 'print'"
 
     let keywords = 
         Seq.zip
@@ -100,7 +120,8 @@ module Keywords =
                 "cons"; "decons"; "eq" ; "lt"; "gt";
                 "toInt"; "toFloat"; "and"; "or"; "not";
                 "AND"; "XOR"; "OR"; "type"; "dup";
-                "swap"
+                "swap"; "dip"; "explode"; "if"; "pop";
+                "print"
             ]
             (Seq.initInfinite id)
         |> Map.ofSeq
@@ -112,10 +133,11 @@ module Keywords =
             (2, lt); (2, gt); (2, toInt); (2, toFloat);
             (2, logicalAnd); (2, logicalOr); (2, not);
             (2, bitwiseAnd); (2, xor); (2, bitwiseOr);
-            (1, typeOf); (1, dup); (2, swap);
+            (1, typeOf); (1, dup); (2, swap); (2, dip);
+            (1, explode); (3, branch); (1, pop); (1, print)
         |]
 
-
+let printId = Keywords.keywords.Item "print"
 
 let rec force (definitions:OpCode list[]) = function
     | Call(id) :: stack -> force definitions (List.rev definitions.[id] @ stack)
@@ -126,7 +148,7 @@ let rec force (definitions:OpCode list[]) = function
             | Call(_) :: _ as stack -> forceFeed n (force definitions stack)
             | Keyword(_) :: _  as stack -> forceFeed n (force definitions stack)
             | h :: t -> h :: (forceFeed (n-1) t)
-            | [] -> failwith "stack underflow"
+            | [] -> []
         forceFeed args stack
         |> func
     | v -> v // primitive values need not be forced
@@ -134,6 +156,7 @@ let rec force (definitions:OpCode list[]) = function
 
 let vmExecutionStep definitons stack = function
     | Force -> force definitons stack // evaluate thunk at top of stack
+    | Keyword(id) as print when id = printId -> force definitons (print::stack)
     | func -> func :: stack // lazy, everything is a function/thunk
 
 let runVM definitions = List.fold (fun state elem -> vmExecutionStep definitions state elem) []
